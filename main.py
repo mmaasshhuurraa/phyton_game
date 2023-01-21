@@ -99,7 +99,7 @@ class MyGame:
 
         for e in pygame.event.get():
           if QUIT == e.type:
-            is_working = False
+            self.game_over = True
           elif self.CREATE_ENEMY == e.type:
             self.enemies.append(
               EnemyBall(pygame.Rect(
