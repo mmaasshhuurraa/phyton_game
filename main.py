@@ -1,66 +1,85 @@
 import pygame
-from pygame.constants import QUIT
+from pygame.constants import QUIT, K_DOWN, K_UP, K_RIGHT, K_LEFT
 import random
-#import time
 
-BALLS_NUM = 20
-BALL_SIZE_MAX = 200
 WIDTH, HEIGHT = 800, 600
+BLACK = (0,0,0)
+WHITE = (255,255,255)
+RED = (255,0,0)
+class Ball(pygame.Surface):
+  def __init__(self, rect: pygame.Rect):
+    super().__init__(rect.size)
+    self.fill(RED)
+    self.rect = rect
+    self.speed = [random.randint(2, 5), 0]
 
-class RandomBall(pygame.Surface):
-  def __init__(self, rect):
-    super().__init__(rect)
-    self.fill(self.randomColor())
-    self.rect = self.get_rect()
-    self.rect.x = random.randint(0,WIDTH-self.rect.width)
-    self.rect.y = random.randint(0,HEIGHT-self.rect.height)
-    self.speed = [
-      random.choice([-2, -1, 1, 2]),
-      random.choice([-2, -1, 1, 2])]
-
-  def randomColor(self):
-    return (
-      random.randint(1, 255), 
-      random.randint(1, 255), 
-      random.randint(1, 255))
-  
   def move(self, speed: list):
     self.rect = self.rect.move(speed)
-  
-  def reflectFromScreenBorders(self, width, heigth):
-    if self.rect.bottom >= heigth or self.rect.top <= 0:
-      self.speed[1]=-self.speed[1]
-      self.fill(self.randomColor())
 
-    if self.rect.right >= width or self.rect.left <= 0:
-      self.speed[0]=-self.speed[0]
-      self.fill(self.randomColor())
+class HeroBall(Ball):
+  def __init__(self, rect: pygame.Rect):
+    super().__init__(rect)
+    self.fill(WHITE)
+    self.speed = [5, 5]
 
-pygame.init()
+  def handlePressedKeys(self, pressed_keys):
+    if pressed_keys[K_DOWN] and self.rect.bottom < HEIGHT:
+      self.move((0, self.speed[1]))
 
-surface = pygame.display.set_mode((WIDTH, HEIGHT))
+    if pressed_keys[K_UP] and self.rect.top > 0:
+      self.move((0, -self.speed[1]))
 
-balls = []
-for i in range(0, BALLS_NUM):
-  balls.append(
-    RandomBall((
-      random.randint(1, BALL_SIZE_MAX),
-      random.randint(1, BALL_SIZE_MAX))))
+    if pressed_keys[K_RIGHT] and self.rect.right < WIDTH:
+      self.move((self.speed[0], 0))
 
-is_working = True
-while is_working:
-    for e in pygame.event.get():
-      if QUIT == e.type:
-        is_working = False
+    if pressed_keys[K_LEFT] and self.rect.left > 0:
+      self.move((-self.speed[0], 0))
 
-    surface.fill((0,0,0))
+class MyGame:
+  def __init__(self):
+    pygame.init()
 
-    for ball in balls:
-      ball.move(ball.speed)
-      ball.reflectFromScreenBorders(WIDTH, HEIGHT)
-      surface.blit(ball, ball.rect)
+    self.surface = pygame.display.set_mode((WIDTH, HEIGHT))
 
-    pygame.display.flip()
-    #time.sleep(0.1)
+    self.CREATE_ENEMY = pygame.USEREVENT + 1
+    pygame.time.set_timer(self.CREATE_ENEMY, 1500)
 
-pygame.quit()
+    self.FPS = pygame.time.Clock()
+
+    self.hero = HeroBall(pygame.Rect(100, HEIGHT / 2, 20, 20))
+    self.enemies = []
+
+  def loop(self):
+    is_working = True
+
+    while is_working:
+        self.FPS.tick(60)
+
+        for e in pygame.event.get():
+          if QUIT == e.type:
+            is_working = False
+          elif self.CREATE_ENEMY == e.type:
+            self.enemies.append(
+              Ball(pygame.Rect(
+                WIDTH, random.randint(0, HEIGHT - 20), 20, 20)))
+
+        self.hero.handlePressedKeys(
+          pygame.key.get_pressed())
+        
+        self.surface.fill(BLACK)
+        self.surface.blit(self.hero, self.hero.rect)
+
+        for enemy in self.enemies:
+          enemy.move((-enemy.speed[0], 0))
+          self.surface.blit(enemy, enemy.rect)
+
+          if enemy.rect.left < -20:
+            self.enemies.pop(self.enemies.index(enemy))
+          
+          if self.hero.rect.colliderect(enemy.rect):
+            self.enemies.pop(self.enemies.index(enemy))
+
+        pygame.display.flip()
+
+game = MyGame()
+game.loop()
