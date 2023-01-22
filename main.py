@@ -102,6 +102,21 @@ class BackGround:
     canvas.blit(self.surface, self.rect1)
     canvas.blit(self.surface, self.rect2)
 
+class TextField:
+  def __init__(self, fontName, fontSize, rect, color, text):
+    self.scoreFont = pygame.font.SysFont(fontName, fontSize)
+    self.rect = rect
+    self.color = color
+    self.text = text
+
+  def setText(self, text):
+    self.text = text
+
+  def draw(self, canvas: pygame.Surface):
+    canvas.blit(
+      self.scoreFont.render(self.text, True, self.color), 
+      self.rect )
+
 class MyGame:
   def __init__(self, width, height):
     pygame.init()
@@ -129,8 +144,11 @@ class MyGame:
     self.enemies = []
     self.bonuses = []
 
-    self.scoreFont = pygame.font.SysFont('Verdana', 20)
     self.scores = 0
+    self.scoresTextField = TextField(
+      'Verdana', 20, 
+      pygame.Rect(self.width - 120, 10, 120, 20), 
+      BLACK, f'scores: {self.scores}')
 
   def frame(self):
     self.background.frame()
@@ -152,6 +170,7 @@ class MyGame:
       if self.hero.rect.colliderect(bonus.rect):
         self.bonuses.pop(self.bonuses.index(bonus))
         self.scores += 1
+        self.scoresTextField.setText(f'scores: {self.scores}')
         continue
 
       if bonus.rect.top > self.height:
@@ -167,9 +186,7 @@ class MyGame:
     for bonus in self.bonuses:
       bonus.draw(self.surface)
     
-    self.surface.blit(
-      self.scoreFont.render(str(self.scores), True, BLACK), 
-      (self.width - 30, 10 ))
+    self.scoresTextField.draw(self.surface)
 
   def loop(self):
     while not self.game_over:
