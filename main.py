@@ -2,6 +2,7 @@ from typing import Tuple
 import pygame
 from pygame.constants import QUIT, K_DOWN, K_UP, K_RIGHT, K_LEFT
 import random
+from os import listdir
 
 WIDTH, HEIGHT = 800, 600
 BLACK = (0,0,0)
@@ -46,9 +47,20 @@ class HeroBall(Ball):
   def __init__(self, pos: Tuple[int, int]):
     super().__init__()
 
-    self.surface = pygame.image.load('images/player.png').convert_alpha()
+    GOOSE_ANIM_PATH = 'images/goose'
+    self.surfaces = [pygame.image.load(
+      GOOSE_ANIM_PATH + '/' + file).convert_alpha() 
+        for file in listdir(GOOSE_ANIM_PATH)]
+
+    self.anim_index = 0
+    self.surface = self.surfaces[self.anim_index]
     self.rect = pygame.Rect(pos[0], pos[1], *self.surface.get_size())
     self.speed = [5, 5]
+
+  def doAnim(self):
+    self.anim_index += 1
+    self.anim_index %= len(self.surfaces)
+    self.surface = self.surfaces[self.anim_index]
 
   def draw(self, canvas: pygame.Surface):
     canvas.blit(self.surface, self.rect)
@@ -105,6 +117,8 @@ class MyGame:
     pygame.time.set_timer(self.CREATE_ENEMY, 1500)
     self.CREATE_BONUS = pygame.USEREVENT + 2
     pygame.time.set_timer(self.CREATE_BONUS, 3000)
+    self.DO_ANIM = pygame.USEREVENT + 3
+    pygame.time.set_timer(self.DO_ANIM, 125)
 
     self.FPS = pygame.time.Clock()
 
@@ -155,7 +169,7 @@ class MyGame:
             enemy = EnemyBall()
             enemy.rect.move_ip(
               self.width, 
-              random.randint(0, self.height - enemy.rect.width))
+              random.randint(0, self.height - enemy.rect.height))
             self.enemies.append(enemy)
 
           elif self.CREATE_BONUS == e.type:
@@ -164,6 +178,9 @@ class MyGame:
               random.randint(0, self.width / 2), 
               -bonus.rect.height)
             self.bonuses.append(bonus)
+
+          elif self.DO_ANIM == e.type:
+            self.hero.doAnim()
 
         self.hero.handlePressedKeys(
           pygame.key.get_pressed(), 
