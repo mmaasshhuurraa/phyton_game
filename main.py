@@ -4,7 +4,7 @@ from pygame.constants import QUIT, K_DOWN, K_UP, K_RIGHT, K_LEFT
 import random
 from os import listdir
 
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1800, 1000
 BLACK = (0,0,0)
 WHITE = (255,255,255)
 RED = (255,0,0)
