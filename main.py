@@ -9,6 +9,7 @@ BLACK = (0,0,0)
 WHITE = (255,255,255)
 RED = (255,0,0)
 GREEN = (0,255,0)
+
 class Ball:
   def __init__(self):
     self.rect = pygame.Rect(0, 0, 10, 10)
@@ -121,7 +122,7 @@ class MyGame:
   def __init__(self, width, height):
     pygame.init()
     
-    self.game_over = False
+    self.is_game_over = False
 
     self.width = width
     self.height = height
@@ -161,7 +162,7 @@ class MyGame:
         continue;
 
       if self.hero.rect.colliderect(enemy.rect):
-        self.game_over = True
+        self.is_game_over = True
         break
         
     for bonus in self.bonuses:
@@ -188,30 +189,39 @@ class MyGame:
     
     self.scoresTextField.draw(self.surface)
 
+  def createEmemyHandler(self):
+      enemy = EnemyBall()
+      enemy.rect.move_ip(
+        self.width, 
+        random.randint(0, self.height - enemy.rect.height))
+      self.enemies.append(enemy)
+
+  def createBonusHandler(self):
+      bonus = BonusBall()
+      bonus.rect.move_ip(
+        random.randint(0, self.width / 2), 
+        -bonus.rect.height)
+      self.bonuses.append(bonus)
+
+  def doAnimHandler(self):
+      self.hero.doAnim()
+
   def loop(self):
-    while not self.game_over:
+    while not self.is_game_over:
         self.FPS.tick(60)
 
         for e in pygame.event.get():
           if QUIT == e.type:
-            self.game_over = True
+            self.is_game_over = True
             
           elif self.CREATE_ENEMY == e.type:
-            enemy = EnemyBall()
-            enemy.rect.move_ip(
-              self.width, 
-              random.randint(0, self.height - enemy.rect.height))
-            self.enemies.append(enemy)
+            self.createEmemyHandler()
 
           elif self.CREATE_BONUS == e.type:
-            bonus = BonusBall()
-            bonus.rect.move_ip(
-              random.randint(0, self.width / 2), 
-              -bonus.rect.height)
-            self.bonuses.append(bonus)
+            self.createBonusHandler()
 
           elif self.DO_ANIM == e.type:
-            self.hero.doAnim()
+            self.doAnimHandler()
 
         self.hero.handlePressedKeys(
           pygame.key.get_pressed(), 
