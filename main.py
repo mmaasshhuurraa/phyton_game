@@ -88,7 +88,7 @@ class BackGround:
     self.rect2 = pygame.Rect(width, 0, width, height)
     self.speed = 3
 
-  def step(self):
+  def frame(self):
     self.rect1 = self.rect1.move((-self.speed, 0))
     self.rect2 = self.rect2.move((-self.speed, 0))
 
@@ -132,30 +132,44 @@ class MyGame:
     self.scoreFont = pygame.font.SysFont('Verdana', 20)
     self.scores = 0
 
-  # TODO Bad method, two actions
-  def stepEnemies(self):
+  def frame(self):
+    self.background.frame()
+
     for enemy in self.enemies:
       enemy.move((-enemy.speed[0], 0))
-      enemy.draw(self.surface)
-        
+
       if enemy.rect.right < 0:
         self.enemies.pop(self.enemies.index(enemy))
-        
+        continue;
+
       if self.hero.rect.colliderect(enemy.rect):
         self.game_over = True
-
-  # TODO Bad method, two actions
-  def stepBonuses(self):
+        break
+        
     for bonus in self.bonuses:
       bonus.move((0, bonus.speed[1]))
-      bonus.draw(self.surface)
-        
-      if bonus.rect.top > self.height:
-        self.bonuses.pop(self.bonuses.index(bonus))
-        
+
       if self.hero.rect.colliderect(bonus.rect):
         self.bonuses.pop(self.bonuses.index(bonus))
         self.scores += 1
+        continue
+
+      if bonus.rect.top > self.height:
+        self.bonuses.pop(self.bonuses.index(bonus))
+        
+  def draw(self):
+    self.background.draw(self.surface)
+    self.hero.draw(self.surface)
+
+    for enemy in self.enemies:
+      enemy.draw(self.surface)
+
+    for bonus in self.bonuses:
+      bonus.draw(self.surface)
+    
+    self.surface.blit(
+      self.scoreFont.render(str(self.scores), True, BLACK), 
+      (self.width - 30, 10 ))
 
   def loop(self):
     while not self.game_over:
@@ -185,17 +199,9 @@ class MyGame:
         self.hero.handlePressedKeys(
           pygame.key.get_pressed(), 
           self.width, self.height)
-        
-        self.background.step()
-        self.background.draw(self.surface)
-        self.hero.draw(self.surface)
-        
-        self.stepEnemies()
-        self.stepBonuses()
-
-        self.surface.blit(
-          self.scoreFont.render(str(self.scores), True, BLACK), 
-          (self.width - 30, 10 ))
+                
+        self.frame()
+        self.draw()
 
         pygame.display.flip()
 
