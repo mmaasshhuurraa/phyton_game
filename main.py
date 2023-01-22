@@ -1,3 +1,4 @@
+from typing import Tuple
 import pygame
 from pygame.constants import QUIT, K_DOWN, K_UP, K_RIGHT, K_LEFT
 import random
@@ -8,46 +9,86 @@ WHITE = (255,255,255)
 RED = (255,0,0)
 GREEN = (0,255,0)
 class Ball:
-  def __init__(self, rect: pygame.Rect):
-    self.surface = pygame.Surface(rect.size)
-    self.rect = rect
+  def __init__(self):
+    self.rect = pygame.Rect(0, 0, 10, 10)
     self.speed = [1, 1]
 
   def move(self, speed: list):
     self.rect = self.rect.move(speed)
 
-  def draw(self, canvas:pygame.Surface):
-    canvas.blit(self.surface, self.rect)
 class EnemyBall(Ball):
-  def __init__(self, rect: pygame.Rect):
-    super().__init__(rect)
-    self.surface.fill(RED)
+  def __init__(self):
+    super().__init__()
+
+    if not hasattr(EnemyBall, 'surface'):
+      self.surface = pygame.image.load('images/enemy.png').convert_alpha()
+    
+    self.rect = pygame.Rect(0, 0, *self.surface.get_size())
     self.speed = [random.randint(2, 5), 0]
+  
+  def draw(self, canvas: pygame.Surface):
+    canvas.blit(self.surface, self.rect)
 
 class BonusBall(Ball):
-  def __init__(self, rect: pygame.Rect):
-    super().__init__(rect)
-    self.surface.fill(GREEN)
+  def __init__(self):
+    super().__init__()
+
+    if not hasattr(BonusBall, 'surface'):
+      self.surface = pygame.image.load('images/bonus.png').convert_alpha()
+      
+    self.rect = pygame.Rect(0, 0, *self.surface.get_size())
     self.speed = [0, random.randint(2, 5)]
+  
+  def draw(self, canvas: pygame.Surface):
+    canvas.blit(self.surface, self.rect)
 
 class HeroBall(Ball):
-  def __init__(self, rect: pygame.Rect):
-    super().__init__(rect)
-    self.surface.fill(WHITE)
+  def __init__(self, pos: Tuple[int, int]):
+    super().__init__()
+
+    self.surface = pygame.image.load('images/player.png').convert_alpha()
+    self.rect = pygame.Rect(pos[0], pos[1], *self.surface.get_size())
     self.speed = [5, 5]
 
-  def handlePressedKeys(self, pressed_keys):
-    if pressed_keys[K_DOWN] and self.rect.bottom < HEIGHT:
+  def draw(self, canvas: pygame.Surface):
+    canvas.blit(self.surface, self.rect)
+
+  def handlePressedKeys(self, pressed_keys, width, height):
+    if pressed_keys[K_DOWN] and self.rect.bottom < height:
       self.move((0, self.speed[1]))
 
     if pressed_keys[K_UP] and self.rect.top > 0:
       self.move((0, -self.speed[1]))
 
-    if pressed_keys[K_RIGHT] and self.rect.right < WIDTH:
+    if pressed_keys[K_RIGHT] and self.rect.right < width:
       self.move((self.speed[0], 0))
 
     if pressed_keys[K_LEFT] and self.rect.left > 0:
       self.move((-self.speed[0], 0))
+
+class BackGround:
+  def __init__(self, width, height):
+    self.surface = pygame.transform.scale(
+      pygame.image.load('images/background.png').convert(),
+      (width, height))
+
+    self.rect1 = pygame.Rect(0, 0, width, height)
+    self.rect2 = pygame.Rect(width, 0, width, height)
+    self.speed = 3
+
+  def step(self):
+    self.rect1 = self.rect1.move((-self.speed, 0))
+    self.rect2 = self.rect2.move((-self.speed, 0))
+
+    if self.rect1.right < 0:
+      self.rect1.left = self.rect1.width
+
+    if self.rect2.right < 0:
+      self.rect2.left = self.rect2.width
+
+  def draw(self, canvas: pygame.Surface):
+    canvas.blit(self.surface, self.rect1)
+    canvas.blit(self.surface, self.rect2)
 
 class MyGame:
   def __init__(self, width, height):
@@ -67,21 +108,29 @@ class MyGame:
 
     self.FPS = pygame.time.Clock()
 
-    self.hero = HeroBall(pygame.Rect(100, height / 2, 20, 20))
+    self.background = BackGround(width, height)
+
+    self.hero = HeroBall((100, height / 2))
+    
     self.enemies = []
     self.bonuses = []
 
+    self.scoreFont = pygame.font.SysFont('Verdana', 20)
+    self.scores = 0
+
+  # TODO Bad method, two actions
   def stepEnemies(self):
     for enemy in self.enemies:
       enemy.move((-enemy.speed[0], 0))
       enemy.draw(self.surface)
         
-      if enemy.rect.left < -20:
+      if enemy.rect.right < 0:
         self.enemies.pop(self.enemies.index(enemy))
         
       if self.hero.rect.colliderect(enemy.rect):
         self.game_over = True
 
+  # TODO Bad method, two actions
   def stepBonuses(self):
     for bonus in self.bonuses:
       bonus.move((0, bonus.speed[1]))
@@ -92,6 +141,7 @@ class MyGame:
         
       if self.hero.rect.colliderect(bonus.rect):
         self.bonuses.pop(self.bonuses.index(bonus))
+        self.scores += 1
 
   def loop(self):
     while not self.game_over:
@@ -100,26 +150,35 @@ class MyGame:
         for e in pygame.event.get():
           if QUIT == e.type:
             self.game_over = True
+            
           elif self.CREATE_ENEMY == e.type:
-            self.enemies.append(
-              EnemyBall(pygame.Rect(
-                self.width, 
-                random.randint(0, self.height - 20), 
-                20, 20)))
+            enemy = EnemyBall()
+            enemy.rect.move_ip(
+              self.width, 
+              random.randint(0, self.height - enemy.rect.width))
+            self.enemies.append(enemy)
+
           elif self.CREATE_BONUS == e.type:
-            self.bonuses.append(
-              BonusBall(pygame.Rect(
-                random.randint(0, self.width / 2), 
-                -20, 20, 20)))
+            bonus = BonusBall()
+            bonus.rect.move_ip(
+              random.randint(0, self.width / 2), 
+              -bonus.rect.height)
+            self.bonuses.append(bonus)
 
         self.hero.handlePressedKeys(
-          pygame.key.get_pressed())
+          pygame.key.get_pressed(), 
+          self.width, self.height)
         
-        self.surface.fill(BLACK)
+        self.background.step()
+        self.background.draw(self.surface)
         self.hero.draw(self.surface)
         
         self.stepEnemies()
         self.stepBonuses()
+
+        self.surface.blit(
+          self.scoreFont.render(str(self.scores), True, BLACK), 
+          (self.width - 30, 10 ))
 
         pygame.display.flip()
 
